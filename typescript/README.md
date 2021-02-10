@@ -1,5 +1,7 @@
 # task.json-client
 
+Typescript library to interact with [task.json-server](https://github.com/DCsunset/task.json-server).
+
 ## Installation
 
 ```
