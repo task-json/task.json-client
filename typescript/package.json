@@ -4,6 +4,11 @@
   "description": "Client library to interact with task.json-server",
   "main": "dist/index.js",
   "types": "index.d.ts",
+  "files": [
+    "dist/*",
+    "package*.json",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "jest",
     "build": "rm -rf dist && tsc -p ./tsconfig.build.json"
