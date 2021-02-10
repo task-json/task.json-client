@@ -7,7 +7,7 @@ export class HttpError extends Error {
 	}
 };
 
-function handleError(error: AxiosError) {
+function handleError(error: AxiosError): never {
 	if (error.response) {
 		throw new HttpError(error.response.status, error.response.data);
 	}
@@ -25,9 +25,11 @@ export class Client {
 		this.token = token;
 	}
 
-	async login(): Promise<void> {
+	async login(password: string): Promise<void> {
 		try {
-			const { data } = await axios.post(`${this.server}/session`);
+			const { data } = await axios.post(`${this.server}/session`, {
+				password
+			});
 			this.token = data.token;
 		}
 		catch (error) {
