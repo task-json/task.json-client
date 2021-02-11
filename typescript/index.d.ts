@@ -1,7 +1,7 @@
 import { TaskJson } from "task.json";
 
 export declare class HttpError extends Error {
-	public static: number;
+	public status: number;
 	constructor(status: number, message: string);
 }
 
