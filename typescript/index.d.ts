@@ -11,7 +11,7 @@ export declare class Client {
 
 	constructor(server: string, token?: string);
 
-	login(): Promise<void>;
+	login(password: string): Promise<void>;
 	
 	logout(): Promise<void>;
 
