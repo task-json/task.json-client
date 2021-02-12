@@ -1,5 +1,8 @@
 # task.json-client
 
+[![npm version](https://badgen.net/npm/v/task.json-client)](https://www.npmjs.com/package/task.json-client)
+[![license](https://badgen.net/npm/license/task.json-client)](https://www.npmjs.com/package/task.json-client)
+
 Typescript library to interact with [task.json-server](https://github.com/DCsunset/task.json-server).
 
 ## Installation
