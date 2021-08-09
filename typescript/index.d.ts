@@ -1,4 +1,4 @@
-import { TaskJson } from "task.json";
+import { TaskJson, DiffStat } from "task.json";
 
 export declare class HttpError extends Error {
 	public status: number;
@@ -15,7 +15,13 @@ export declare class Client {
 	
 	logout(): Promise<void>;
 
-	sync(taskJson: TaskJson): Promise<TaskJson>;
+	sync(taskJson: TaskJson): Promise<{
+		data: TaskJson,
+		stat: {
+			client: DiffStat,
+			server: DiffStat
+		}
+	}>;
 
 	download(): Promise<TaskJson>;
 	

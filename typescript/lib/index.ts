@@ -1,5 +1,5 @@
 import axios, { AxiosError } from "axios";
-import { TaskJson } from "task.json";
+import { TaskJson, DiffStat } from "task.json";
 
 export class HttpError extends Error {
 	constructor(public status: number, message: string) {
@@ -49,12 +49,24 @@ export class Client {
 		}
 	}
 
-	async sync(taskJson: TaskJson): Promise<TaskJson> {
+	async sync(taskJson: TaskJson): Promise<{
+		data: TaskJson,
+		stat: {
+			client: DiffStat,
+			server: DiffStat
+		}
+	}> {
 		try {
 			const { data } = await axios.patch(this.server, taskJson, {
 				headers: { "Authorization": `Bearer ${this.token}` }
 			});
-			return data as TaskJson;
+			return data as {
+				data: TaskJson,
+				stat: {
+					client: DiffStat,
+					server: DiffStat
+				}
+			};
 		}
 		catch (error) {
 			handleError(error);
