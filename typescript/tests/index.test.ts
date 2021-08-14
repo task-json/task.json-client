@@ -19,7 +19,7 @@ describe("Client API", () => {
 
 	test("sync", async () => {
 		const tj1 = initTaskJson();
-		const tj2 = await client.sync(tj1);
+		const { data: tj2 } = await client.sync(tj1);
 		expect(isTaskJson(tj2)).toBe(true);
 	});
 
