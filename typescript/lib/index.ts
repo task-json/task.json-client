@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { TaskJson, DiffStat } from "task.json";
 import { PeerCertificate } from "tls";
+import normalizeUrl from "normalize-url";
 import { handleAxiosError } from "./errors";
 
 type RequireField<T, K extends keyof T> = T & Required<Pick<T, K>>;
@@ -11,7 +12,7 @@ export type ClientConfig = {
 	/// Token to log into server
 	token?: string;
 	/**
-	 * Verify cert chain (default: true)
+	 * Verify cert chain when using https (default: true)
 	 * 
 	 * Only supported in Node.js when verify set to false
 	 */
@@ -28,6 +29,16 @@ export class Client {
 	}
 
 	/**
+	 * Convert relative path to normalized full path
+	 * 
+	 * @param path Relative path
+	 * @returns Full path
+	 */
+	fullPath(path: string) {
+		return normalizeUrl(`${this.config.server}/${path}`);
+	}
+
+	/**
 	 * Get certificate of the server
 	 * It works when verify set to false
 	 * 
@@ -36,7 +47,7 @@ export class Client {
 	async getCertificate(): Promise<PeerCertificate | undefined> {
 		let req: any;
 		try {
-			const resp = await this.axios.head(`${this.config.server}/`);
+			const resp = await this.axios.head(this.fullPath("/"));
 			req = resp.request;
 		}
 		catch (err: any) {
@@ -47,7 +58,7 @@ export class Client {
 
 	async login(password: string): Promise<void> {
 		try {
-			const { data } = await this.axios.post(`${this.config.server}/session`, {
+			const { data } = await this.axios.post(this.fullPath("session"), {
 				password
 			});
 			this.config.token = data.token;
@@ -59,7 +70,7 @@ export class Client {
 	
 	async logout(): Promise<void> {
 		try {
-			await this.axios.delete(`${this.config.server}/session`, {
+			await this.axios.delete(this.fullPath("session"), {
 				headers: { "Authorization": `Bearer ${this.config.token}` }
 			});
 			this.config.token = undefined;
@@ -77,7 +88,7 @@ export class Client {
 		}
 	}> {
 		try {
-			const { data } = await this.axios.patch(`${this.config.server}/`, taskJson, {
+			const { data } = await this.axios.patch(this.fullPath("/"), taskJson, {
 				headers: { "Authorization": `Bearer ${this.config.token}` }
 			});
 			return data as {
@@ -95,7 +106,7 @@ export class Client {
 
 	async download(): Promise<TaskJson> {
 		try {
-			const { data } = await this.axios.get(`${this.config.server}/`, {
+			const { data } = await this.axios.get(this.fullPath("/"), {
 				headers: { "Authorization": `Bearer ${this.config.token}` }
 			});
 			return data as TaskJson;
