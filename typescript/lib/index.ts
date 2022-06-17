@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import { X509Certificate } from "crypto";
 import { TaskJson, DiffStat } from "task.json";
-import { PeerCertificate } from "tls";
 import normalizeUrl from "normalize-url";
 import { handleAxiosError } from "./errors";
 
@@ -17,6 +17,13 @@ export type ClientConfig = {
 	 * Only supported in Node.js when verify set to false
 	 */
 	verify?: boolean;
+	/**
+	 * Trusted CA certificates for verification in PEM format
+	 * It will overwrites all default CAs
+	 * 
+	 * verify should be set to true for this to take effect
+	 */
+	ca?: string | Buffer | (string | Buffer)[]
 };
 
 export class Client {
@@ -39,21 +46,27 @@ export class Client {
 	}
 
 	/**
-	 * Get certificate of the server
-	 * It works when verify set to false
+	 * Get X509 certificate of the server
 	 * 
 	 * (Only works in Node.js)
 	 */
-	async getCertificate(): Promise<PeerCertificate | undefined> {
+	async getCertificate(): Promise<X509Certificate | undefined> {
 		let req: any;
 		try {
-			const resp = await this.axios.head(this.fullPath("/"));
+			const https = await import("https");
+			// Use a new axios instance because only the first request of the connection
+			// does the server provide certificate
+			const resp = await axios.head(this.fullPath("/"), {
+				httpsAgent: new https.Agent({
+					rejectUnauthorized: false
+				})
+			});
 			req = resp.request;
 		}
 		catch (err: any) {
 			req = err.request;
 		}
-		return req?.socket?.getPeerCertificate();
+		return req?.socket?.getPeerX509Certificate();
 	}
 
 	async login(password: string): Promise<void> {
@@ -140,7 +153,16 @@ export async function setupClient(config: ClientConfig) {
 		const https = await import("https");
 		axiosConfig = {
 			httpsAgent: new https.Agent({
-				rejectUnauthorized: false
+				rejectUnauthorized: false,
+			})
+		};
+	}
+	else if (mergedConfig.ca) {
+		// Only works in Node.js
+		const https = await import("https");
+		axiosConfig = {
+			httpsAgent: new https.Agent({
+				ca: mergedConfig.ca
 			})
 		};
 	}
