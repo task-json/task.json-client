@@ -1,58 +1,71 @@
-import axios, { AxiosError } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { TaskJson, DiffStat } from "task.json";
+import { PeerCertificate } from "tls";
+import { handleAxiosError } from "./errors";
 
-export class HttpError extends Error {
-	constructor(public status: number, message: string) {
-		super(message);
-	}
+type RequireField<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
+export type ClientConfig = {
+	/// Server URL
+	server: string,
+	/// Token to log into server
+	token?: string;
+	/**
+	 * Verify cert chain (default: true)
+	 * 
+	 * Only supported in Node.js when verify set to false
+	 */
+	verify?: boolean;
 };
 
-function handleError(error: AxiosError): never {
-	if (error.response) {
-		// The request was made and the server responded with a status code
-		// that falls out of the range of 2xx	
-		throw new HttpError(error.response.status, error.response.data);
-	}
-	else if (error.request) {
-		// The request was made but no response was received
-		throw new HttpError(503, "No response from server");
-	}
-	else {
-		// Something happened in setting up the request that triggered an Error
-		throw new HttpError(500, error.message);
-	}
-}
-
 export class Client {
-	server: string;
-	token?: string;
+	config: RequireField<ClientConfig, "verify">;
+	axios: AxiosInstance;
 
-	constructor(server: string, token?: string) {
-		this.server = server;
-		this.token = token;
+	constructor(config: RequireField<ClientConfig, "verify">, axiosInstance: AxiosInstance) {
+		this.config = config;
+		this.axios = axiosInstance;
+	}
+
+	/**
+	 * Get certificate of the server
+	 * It works when verify set to false
+	 * 
+	 * (Only works in Node.js)
+	 */
+	async getCertificate(): Promise<PeerCertificate | undefined> {
+		let req: any;
+		try {
+			const resp = await this.axios.head(`${this.config.server}/`);
+			req = resp.request;
+		}
+		catch (err: any) {
+			req = err.request;
+		}
+		return req?.socket?.getPeerCertificate();
 	}
 
 	async login(password: string): Promise<void> {
 		try {
-			const { data } = await axios.post(`${this.server}/session`, {
+			const { data } = await this.axios.post(`${this.config.server}/session`, {
 				password
 			});
-			this.token = data.token;
+			this.config.token = data.token;
 		}
 		catch (error: any) {
-			handleError(error);
+			handleAxiosError(error);
 		}
 	}
 	
 	async logout(): Promise<void> {
 		try {
-			await axios.delete(`${this.server}/session`, {
-				headers: { "Authorization": `Bearer ${this.token}` }
+			await this.axios.delete(`${this.config.server}/session`, {
+				headers: { "Authorization": `Bearer ${this.config.token}` }
 			});
-			this.token = undefined;
+			this.config.token = undefined;
 		}
 		catch (error: any) {
-			handleError(error);
+			handleAxiosError(error);
 		}
 	}
 
@@ -64,8 +77,8 @@ export class Client {
 		}
 	}> {
 		try {
-			const { data } = await axios.patch(this.server, taskJson, {
-				headers: { "Authorization": `Bearer ${this.token}` }
+			const { data } = await this.axios.patch(`${this.config.server}/`, taskJson, {
+				headers: { "Authorization": `Bearer ${this.config.token}` }
 			});
 			return data as {
 				data: TaskJson,
@@ -76,30 +89,51 @@ export class Client {
 			};
 		}
 		catch (error: any) {
-			handleError(error);
+			handleAxiosError(error);
 		}
 	}
 
 	async download(): Promise<TaskJson> {
 		try {
-			const { data } = await axios.get(this.server, {
-				headers: { "Authorization": `Bearer ${this.token}` }
+			const { data } = await this.axios.get(`${this.config.server}/`, {
+				headers: { "Authorization": `Bearer ${this.config.token}` }
 			});
 			return data as TaskJson;
 		}
 		catch (error: any) {
-			handleError(error);
+			handleAxiosError(error);
 		}
 	}
 	
 	async upload(taskJson: TaskJson): Promise<void> {
 		try {
-			await axios.patch(this.server, taskJson, {
-				headers: { "Authorization": `Bearer ${this.token}` }
+			await this.axios.patch(`${this.config.server}/`, taskJson, {
+				headers: { "Authorization": `Bearer ${this.config.token}` }
 			});
 		}
 		catch (error: any) {
-			handleError(error);
+			handleAxiosError(error);
 		}
 	}
 };
+
+export async function setupClient(config: ClientConfig) {
+	const mergedConfig: RequireField<ClientConfig, "verify"> = {
+		verify: true,
+		...config
+	};
+
+	let axiosConfig: AxiosRequestConfig | undefined;
+	if (!mergedConfig.verify) {
+		// Only works in Node.js
+		const https = await import("https");
+		axiosConfig = {
+			httpsAgent: new https.Agent({
+				rejectUnauthorized: false
+			})
+		};
+	}
+
+	const axiosInstance = axios.create(axiosConfig);
+	return new Client(mergedConfig, axiosInstance);
+}
