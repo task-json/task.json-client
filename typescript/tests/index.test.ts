@@ -1,6 +1,7 @@
 import { initTaskJson, isTaskJson } from "task.json";
 import { Client, setupClient } from "../lib";
 import { X509Certificate } from "node:crypto";
+import { getCertificate } from "../lib/utils";
 
 describe("Connect to HTTP Server", () => {
 	let client: Client;
@@ -45,11 +46,10 @@ describe("Connect to HTTP Server", () => {
 describe("Connect to HTTPS Server", () => {
 	let client1: Client;
 	let client2: Client;
+	const server = "https://localhost:8000";
 	
 	test("setup client 1", async () => {
-		client1 = await setupClient({
-			server: "https://localhost:8000"
-		});
+		client1 = await setupClient({ server });
 	});
 
 	test("reject self-signed cert", async () => {
@@ -58,13 +58,13 @@ describe("Connect to HTTPS Server", () => {
 	
 	let cert: X509Certificate | undefined;
 	test("get certificate", async () => {
-		cert = await client1.getCertificate();
+		cert = await getCertificate(server);
 		expect(cert).toBeTruthy();
 	})
 
 	test("setup client 2", async () => {
 		client2 = await setupClient({
-			server: "https://localhost:8000",
+			server,
 			ca: cert?.toString()
 		});
 	});
@@ -72,10 +72,4 @@ describe("Connect to HTTPS Server", () => {
 	test("valid login", async () => {
 		await client2.login("admin");
 	});
-
-	test("get certificate", async () => {
-		const cert = await client2.getCertificate();
-		console.log(cert?.fingerprint);
-		expect(cert).toBeTruthy();
-	})
 });
