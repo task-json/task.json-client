@@ -1,7 +1,6 @@
 import { initTaskJson, isTaskJson } from "task.json";
-import { Client, setupClient } from "../lib";
+import { Client, setupClient, getCertificate } from "../lib";
 import { X509Certificate } from "node:crypto";
-import { getCertificate } from "../lib/utils";
 
 describe("Connect to HTTP Server", () => {
 	let client: Client;

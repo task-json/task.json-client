@@ -3,6 +3,10 @@ import { TaskJson, DiffStat } from "task.json";
 import normalizeUrl from "normalize-url";
 import { handleAxiosError } from "./errors";
 
+// Re-export
+export * from "./errors";
+export * from "./utils";
+
 type RequireField<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
 export type ClientConfig = {
