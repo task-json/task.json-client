@@ -7,7 +7,7 @@ import { handleAxiosError } from "./errors";
 export * from "./errors";
 export * from "./utils";
 
-type RequireField<T, K extends keyof T> = T & Required<Pick<T, K>>;
+export type RequireField<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
 export type ClientConfig = {
 	/// Server URL
@@ -45,7 +45,7 @@ export class Client {
 	 * @param path Relative path
 	 * @returns Full path
 	 */
-	fullPath(path: string) {
+	fullPath(path: string): string {
 		return normalizeUrl(`${this.config.server}/${path}`);
 	}
 
@@ -121,7 +121,7 @@ export class Client {
 	}
 };
 
-export async function setupClient(config: ClientConfig) {
+export async function setupClient(config: ClientConfig): Promise<Client> {
 	const mergedConfig: RequireField<ClientConfig, "verify"> = {
 		verify: true,
 		...config

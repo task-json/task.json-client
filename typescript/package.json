@@ -3,16 +3,15 @@
   "version": "0.2.0",
   "description": "Client library to interact with task.json-server",
   "main": "dist/index.js",
-  "types": "index.d.ts",
+  "types": "dist/index.d.ts",
   "files": [
     "dist/*",
-    "index.d.ts",
     "package*.json",
     "LICENSE"
   ],
   "scripts": {
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
-    "build": "rm -rf dist && tsc -p ./tsconfig.build.json"
+    "build": "rm -rf dist && tsc -p ./tsconfig.build.json --declaration"
   },
   "keywords": [
     "task.json",
