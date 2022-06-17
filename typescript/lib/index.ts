@@ -9,10 +9,17 @@ export class HttpError extends Error {
 
 function handleError(error: AxiosError): never {
 	if (error.response) {
+		// The request was made and the server responded with a status code
+		// that falls out of the range of 2xx	
 		throw new HttpError(error.response.status, error.response.data);
 	}
-	else {
+	else if (error.request) {
+		// The request was made but no response was received
 		throw new HttpError(503, "No response from server");
+	}
+	else {
+		// Something happened in setting up the request that triggered an Error
+		throw new HttpError(500, error.message);
 	}
 }
 
@@ -32,7 +39,7 @@ export class Client {
 			});
 			this.token = data.token;
 		}
-		catch (error) {
+		catch (error: any) {
 			handleError(error);
 		}
 	}
@@ -44,7 +51,7 @@ export class Client {
 			});
 			this.token = undefined;
 		}
-		catch (error) {
+		catch (error: any) {
 			handleError(error);
 		}
 	}
@@ -68,7 +75,7 @@ export class Client {
 				}
 			};
 		}
-		catch (error) {
+		catch (error: any) {
 			handleError(error);
 		}
 	}
@@ -80,7 +87,7 @@ export class Client {
 			});
 			return data as TaskJson;
 		}
-		catch (error) {
+		catch (error: any) {
 			handleError(error);
 		}
 	}
@@ -91,7 +98,7 @@ export class Client {
 				headers: { "Authorization": `Bearer ${this.token}` }
 			});
 		}
-		catch (error) {
+		catch (error: any) {
 			handleError(error);
 		}
 	}
