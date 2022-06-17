@@ -11,7 +11,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "jest",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "build": "rm -rf dist && tsc -p ./tsconfig.build.json"
   },
   "keywords": [
