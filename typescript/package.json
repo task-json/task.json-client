@@ -1,6 +1,6 @@
 {
   "name": "task.json-client",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Client library to interact with task.json-server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
