@@ -1,11 +1,11 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { TaskJson, DiffStat } from "task.json";
 import normalizeUrl from "normalize-url";
-import { handleAxiosError } from "./errors";
+import { handleAxiosError } from "./errors.js";
 
 // Re-export
-export * from "./errors";
-export * from "./utils";
+export * from "./errors.js";
+export * from "./utils.js";
 
 export type RequireField<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
