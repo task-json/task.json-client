@@ -20,7 +20,7 @@
     "library"
   ],
   "author": "DCsunset",
-  "license": "GPL-3.0",
+  "license": "AGPL-3.0",
   "devDependencies": {
     "@types/jest": "^28.1.2",
     "eslint": "^8.17.0",
