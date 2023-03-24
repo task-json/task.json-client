@@ -14,13 +14,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/> 
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
-import { TaskJson, DiffStat } from "task.json";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from "axios";
+import { TaskJson, DiffStat, mergeTaskJson, compareMergedTaskJson, serializeTaskJson, deserializeTaskJson } from "task.json";
 import normalizeUrl from "normalize-url";
-import { handleAxiosError } from "./errors.js";
+import { handleError } from "./utils/errors.js";
+import { decrypt } from "./utils/crypto.js";
 
 // Re-export
-export * from "./errors.js";
+export * from "./utils/errors.js";
 export * from "./utils.js";
 
 export type RequireField<T, K extends keyof T> = T & Required<Pick<T, K>>;
@@ -29,13 +30,13 @@ export type ClientConfig = {
 	/// Server URL
 	server: string,
 	/// Token to log into server
-	token?: string;
+	token?: string,
 	/**
 	 * Verify cert chain when using https (default: true)
 	 * 
 	 * (Only works in Node.js when verify set to false)
 	 */
-	verify?: boolean;
+	verify?: boolean,
 	/**
 	 * Trusted CA certificates for verification in PEM format
 	 * It will overwrite all default CAs
@@ -43,7 +44,18 @@ export type ClientConfig = {
 	 * verify should be set to true for this to take effect
 	 * (Only works in Node.js)
 	 */
-	ca?: string | Buffer | (string | Buffer)[]
+	ca?: string | Buffer | (string | Buffer)[],
+
+	/**
+	 * Max retries to make when there's conflicting updates
+	 * If undefined, won't retry automatically
+	 */
+	maxRetries?: number;
+	/**
+	 * Key to encrypt the data before sending to the server
+	 * If undefined, data won't be encrypted
+	 */
+	encryptionKey?: string
 };
 
 export class Client {
@@ -73,11 +85,11 @@ export class Client {
 			this.config.token = data.token;
 		}
 		catch (error: any) {
-			handleAxiosError(error);
+			handleError(error);
 		}
 	}
 	
-	async logout(): Promise<void> {
+	async logout() {
 		try {
 			await this.axios.delete(this.fullPath("session"), {
 				headers: { "Authorization": `Bearer ${this.config.token}` }
@@ -85,54 +97,81 @@ export class Client {
 			this.config.token = undefined;
 		}
 		catch (error: any) {
-			handleAxiosError(error);
+			handleError(error);
 		}
 	}
 
-	async sync(taskJson: TaskJson): Promise<{
-		data: TaskJson,
-		stat: {
-			client: DiffStat,
-			server: DiffStat
-		}
-	}> {
+	async sync(data: TaskJson) {
 		try {
-			const { data } = await this.axios.patch(this.fullPath("/"), taskJson, {
-				headers: { "Authorization": `Bearer ${this.config.token}` }
-			});
-			return data as {
-				data: TaskJson,
-				stat: {
-					client: DiffStat,
-					server: DiffStat
+			// Upload back to server using the same expected version number
+			let { data: serverData, version } = await this.download();
+
+			for (let i = 0; ; ++i) {
+				try {
+					const merged = mergeTaskJson(data, serverData);
+					await this.upload(merged, version);
+
+					const clientDiff = compareMergedTaskJson(data, merged);
+					const serverDiff = compareMergedTaskJson(serverData, merged);
+
+					return {
+						data: merged,
+						diff: {
+							client: clientDiff,
+							server: serverDiff
+						}
+					};
 				}
+				catch (err) {
+					if (err instanceof AxiosError && err.response?.status === 409 && i < (this.config.maxRetries ?? 0)) {
+						const resp = err.response.data;
+						console.assert("data" in resp && "version" in resp, `Invalid error response from server: ${resp}`);
+						// Conflicting updates, retry using new data
+						({ data: serverData, version } = resp);
+					}
+					else {
+						throw err;
+					}
+				}
+			}
+		}
+		catch (error: any) {
+			handleError(error);
+		}
+	}
+
+	async download() {
+		try {
+			let { data: { data, version } } = await this.axios.get(this.fullPath("/"), {
+				headers: { "Authorization": `Bearer ${this.config.token}` },
+				// Acquire lock to prevent concurrent modification
+			});
+			if (this.config.encryptionKey) {
+				// Decrypt data
+				data = await decrypt(data, this.config.encryptionKey);
+			}
+			return {
+				data: deserializeTaskJson(data),
+				version: version as number
 			};
 		}
 		catch (error: any) {
-			handleAxiosError(error);
-		}
-	}
-
-	async download(): Promise<TaskJson> {
-		try {
-			const { data } = await this.axios.get(this.fullPath("/"), {
-				headers: { "Authorization": `Bearer ${this.config.token}` }
-			});
-			return data as TaskJson;
-		}
-		catch (error: any) {
-			handleAxiosError(error);
+			handleError(error);
 		}
 	}
 	
-	async upload(taskJson: TaskJson): Promise<void> {
+	/// Version number used for concurrency control (-1 means overwriting)
+	async upload(data: TaskJson, version: number = -1) {
 		try {
-			await this.axios.patch(`${this.config.server}/`, taskJson, {
+			await this.axios.put(this.fullPath("/"), {
+				data: serializeTaskJson(data),
+				version
+			}, {
 				headers: { "Authorization": `Bearer ${this.config.token}` }
 			});
 		}
 		catch (error: any) {
-			handleAxiosError(error);
+			handleError(error);
 		}
 	}
 };

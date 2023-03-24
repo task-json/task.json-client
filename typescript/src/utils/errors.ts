@@ -38,3 +38,15 @@ export function handleAxiosError(error: AxiosError): never {
 		throw new HttpError(500, error.message);
 	}
 }
+
+export function handleError(error: any): never {
+	if (error instanceof AxiosError) {
+		handleAxiosError(error)
+	}
+	else if (error instanceof HttpError) {
+		throw error;
+	}
+	else {
+		throw new HttpError(500, error.message);
+	}
+}
