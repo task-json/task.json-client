@@ -18,7 +18,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from "axios";
 import { TaskJson, DiffStat, mergeTaskJson, compareMergedTaskJson, serializeTaskJson, deserializeTaskJson } from "task.json";
 import normalizeUrl from "normalize-url";
 import { handleError } from "./utils/errors.js";
-import { decrypt } from "./utils/crypto.js";
+import { decrypt, encrypt } from "./utils/crypto.js";
 
 // Re-export
 export * from "./utils/errors.js";
@@ -144,14 +144,13 @@ export class Client {
 		try {
 			let { data: { data, version } } = await this.axios.get(this.fullPath("/"), {
 				headers: { "Authorization": `Bearer ${this.config.token}` },
-				// Acquire lock to prevent concurrent modification
 			});
-			if (this.config.encryptionKey) {
+			if (data && this.config.encryptionKey) {
 				// Decrypt data
 				data = await decrypt(data, this.config.encryptionKey);
 			}
 			return {
-				data: deserializeTaskJson(data),
+				data: data ? deserializeTaskJson(data) : [],
 				version: version as number
 			};
 		}
@@ -163,10 +162,25 @@ export class Client {
 	/// Version number used for concurrency control (-1 means overwriting)
 	async upload(data: TaskJson, version: number = -1) {
 		try {
+			let serialized = serializeTaskJson(data);
+			if (this.config.encryptionKey) {
+				serialized = await encrypt(serialized, this.config.encryptionKey);
+			}
 			await this.axios.put(this.fullPath("/"), {
-				data: serializeTaskJson(data),
+				data: serialized,
 				version
 			}, {
+				headers: { "Authorization": `Bearer ${this.config.token}` }
+			});
+		}
+		catch (error: any) {
+			handleError(error);
+		}
+	}
+
+	async delete() {
+		try {
+			await this.axios.delete(this.fullPath("/"), {
 				headers: { "Authorization": `Bearer ${this.config.token}` }
 			});
 		}
