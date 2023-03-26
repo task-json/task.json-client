@@ -15,47 +15,82 @@
  */
 
 
-import { initTaskJson, isTaskJson } from "task.json";
-import { Client, setupClient, getCertificate } from "../lib";
+import { Client, setupClient, getCertificate } from "../src/index.js";
 import { X509Certificate } from "node:crypto";
+import { TaskJson } from "task.json";
 
 describe("Connect to HTTP Server", () => {
 	let client: Client;
-	
-	test("setup client", async () => {
-		client = await setupClient({
-			server: "http://localhost:3000"
+	const tj1: TaskJson = [
+		{
+			id: "1",
+			status: "todo",
+			text: "Hello, world 1",
+			created: new Date("2000-01-01").toISOString(),
+			modified: new Date("2010-07-07").toISOString(),
+		}
+	];
+	const tj2: TaskJson = [
+		{
+			id: "2",
+			status: "todo",
+			text: "Hello, world 1",
+			created: new Date("2000-01-01").toISOString(),
+			modified: new Date("2010-07-07").toISOString(),
+		}
+	];
+
+	const encryptionKeys = [undefined, "abc"];
+
+	for (const key of encryptionKeys) {
+		test("setup client", async () => {
+			client = await setupClient({
+				server: "http://localhost:3000",
+				encryptionKey: key
+			});
 		});
-	});
 
-	test("invalid login", async () => {
-		await expect(client.login("test")).rejects.toThrow();
-	});
+		test("invalid login", async () => {
+			await expect(client.login("test")).rejects.toThrow();
+		});
 
-	test("valid login", async () => {
-		await client.login("admin");
-	});
+		test("valid login", async () => {
+			await client.login("admin");
+		});
 
-	test("download", async () => {
-		const tj = await client.download();
-		expect(isTaskJson(tj)).toBe(true);
-	});
+		test("upload", async () => {
+			const tj1: TaskJson = [
+				{
+					id: "1",
+					status: "todo",
+					text: "Hello, world 1",
+					created: new Date("2000-01-01").toISOString(),
+					modified: new Date("2010-07-07").toISOString(),
+				}
+			];
+			await client.upload(tj1);
+		});
 
-	test("sync", async () => {
-		const tj1 = initTaskJson();
-		const { data: tj2 } = await client.sync(tj1);
-		expect(isTaskJson(tj2)).toBe(true);
-	});
+		test("download", async () => {
+			const { data } = await client.download();
+			expect(data).toEqual(tj1);
+		});
 
 
-	test("upload", async () => {
-		const tj1 = initTaskJson();
-		await client.upload(tj1);
-	});
+		test("sync", async () => {
+			const { data } = await client.sync(tj2);
+			expect(data.map(t => t.id).sort()).toEqual(["1", "2"]);
+		});
 
-	test("logout", async () => {
-		await client.logout();
-	});
+		test("download", async () => {
+			const { data }=  await client.download();
+			expect(data.map(t => t.id).sort()).toEqual(["1", "2"]);
+		});
+
+		test("delete", async () => {
+			await client.delete();
+		});
+	}
 });
 
 // Self-signed cert

@@ -1,11 +1,19 @@
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  // See https://kulshekhar.github.io/ts-jest/docs/guides/esm-support/
-  extensionsToTreatAsEsm: ['.ts'],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
-  }
+/** @type {import('ts-jest').JestConfigWithTsJest} */
+const config = {
+  preset: 'ts-jest/presets/default-esm',
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  transform: {
+    // '^.+\\.[tj]sx?$' to process js/ts with `ts-jest`
+    // '^.+\\.m?[tj]sx?$' to process js/ts/mjs/mts with `ts-jest`
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        useESM: true,
+      },
+    ],
+  },
 };
+
+export default config;
