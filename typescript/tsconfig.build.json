@@ -2,5 +2,5 @@
 	"extends": "./tsconfig.json",
 	// To compile only the files in src
 	// (the tsconfig.json supports ts for test scripts)
-	"include": ["lib/"]
+	"include": ["src/"]
 }
