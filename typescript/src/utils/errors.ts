@@ -27,7 +27,9 @@ export function handleAxiosError(error: AxiosError): never {
 	if (error.response) {
 		// The request was made and the server responded with a status code
 		// that falls out of the range of 2xx	
-		throw new HttpError(error.response.status, error.response.data as string);
+		const resp = error.response.data as any;
+		const msg = typeof resp?.message === "string" ? resp.message : resp;
+		throw new HttpError(error.response.status, msg);
 	}
 	else if (error.request) {
 		// The request was made but no response was received
