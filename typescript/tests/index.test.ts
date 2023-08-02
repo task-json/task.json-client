@@ -11,7 +11,7 @@
  * GNU Affero General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/> 
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>
  */
 
 
@@ -20,107 +20,112 @@ import { X509Certificate } from "node:crypto";
 import { TaskJson } from "task.json";
 
 describe("Connect to HTTP Server", () => {
-	let client: Client;
-	const tj1: TaskJson = [
-		{
-			id: "1",
-			status: "todo",
-			text: "Hello, world 1",
-			created: new Date("2000-01-01").toISOString(),
-			modified: new Date("2010-07-07").toISOString(),
-		}
-	];
-	const tj2: TaskJson = [
-		{
-			id: "2",
-			status: "todo",
-			text: "Hello, world 1",
-			created: new Date("2000-01-01").toISOString(),
-			modified: new Date("2010-07-07").toISOString(),
-		}
-	];
+  let client: Client;
+  const tj1: TaskJson = [
+    {
+      id: "1",
+      status: "todo",
+      text: "Hello, world 1",
+      created: new Date("2000-01-01").toISOString(),
+      modified: new Date("2010-07-07").toISOString(),
+    }
+  ];
+  const tj2: TaskJson = [
+    {
+      id: "2",
+      status: "todo",
+      text: "Hello, world 1",
+      created: new Date("2000-01-01").toISOString(),
+      modified: new Date("2010-07-07").toISOString(),
+    }
+  ];
 
-	const encryptionKeys = [undefined, "abc"];
+  const encryptionKeys = [undefined, "abc"];
 
-	for (const key of encryptionKeys) {
-		test("setup client", async () => {
-			client = await setupClient({
-				server: "http://localhost:3000",
-				encryptionKey: key
-			});
-		});
+  for (const key of encryptionKeys) {
+    test("setup client", async () => {
+      client = await setupClient({
+        server: "http://localhost:3000",
+        encryptionKey: key
+      });
+    });
 
-		test("invalid login", async () => {
-			await expect(client.login("test")).rejects.toThrow();
-		});
+    test("invalid login", async () => {
+      await expect(client.login("test")).rejects.toThrow();
+    });
 
-		test("valid login", async () => {
-			await client.login("admin");
-		});
+    test("valid login", async () => {
+      await client.login("admin");
+    });
 
-		test("upload", async () => {
-			const tj1: TaskJson = [
-				{
-					id: "1",
-					status: "todo",
-					text: "Hello, world 1",
-					created: new Date("2000-01-01").toISOString(),
-					modified: new Date("2010-07-07").toISOString(),
-				}
-			];
-			await client.upload(tj1);
-		});
+    test("upload", async () => {
+      const tj1: TaskJson = [
+        {
+          id: "1",
+          status: "todo",
+          text: "Hello, world 1",
+          created: new Date("2000-01-01").toISOString(),
+          modified: new Date("2010-07-07").toISOString(),
+        }
+      ];
+      await client.upload(tj1);
+    });
 
-		test("download", async () => {
-			const { data } = await client.download();
-			expect(data).toEqual(tj1);
-		});
+    test("download", async () => {
+      const { data } = await client.download();
+      expect(data).toEqual(tj1);
+    });
 
 
-		test("sync", async () => {
-			const { data } = await client.sync(tj2);
-			expect(data.map(t => t.id).sort()).toEqual(["1", "2"]);
-		});
+    test("sync", async () => {
+      const { data } = await client.sync(tj2);
+      expect(data.map(t => t.id).sort()).toEqual(["1", "2"]);
+    });
 
-		test("download", async () => {
-			const { data }=  await client.download();
-			expect(data.map(t => t.id).sort()).toEqual(["1", "2"]);
-		});
+    test("download", async () => {
+      const { data } = await client.download();
+      expect(data.map(t => t.id).sort()).toEqual(["1", "2"]);
+    });
 
-		test("delete", async () => {
-			await client.delete();
-		});
-	}
+    test("download with wrong key", async () => {
+      client.config.encryptionKey = key ? undefined : "123";
+      await expect(client.download()).rejects.toThrow();
+    });
+
+    test("delete", async () => {
+      await client.delete();
+    });
+  }
 });
 
 // Self-signed cert
 describe("Connect to HTTPS Server", () => {
-	let client1: Client;
-	let client2: Client;
-	const server = "https://localhost:8000";
-	
-	test("setup client 1", async () => {
-		client1 = await setupClient({ server });
-	});
+  let client1: Client;
+  let client2: Client;
+  const server = "https://localhost:8000";
 
-	test("reject self-signed cert", async () => {
-		await expect(client1.login("admin")).rejects.toThrow();
-	});
-	
-	let cert: X509Certificate | undefined;
-	test("get certificate", async () => {
-		cert = await getCertificate(server);
-		expect(cert).toBeTruthy();
-	})
+  test("setup client 1", async () => {
+    client1 = await setupClient({ server });
+  });
 
-	test("setup client 2", async () => {
-		client2 = await setupClient({
-			server,
-			ca: cert?.toString()
-		});
-	});
+  test("reject self-signed cert", async () => {
+    await expect(client1.login("admin")).rejects.toThrow();
+  });
 
-	test("valid login", async () => {
-		await client2.login("admin");
-	});
+  let cert: X509Certificate | undefined;
+  test("get certificate", async () => {
+    cert = await getCertificate(server);
+    expect(cert).toBeTruthy();
+  })
+
+  test("setup client 2", async () => {
+    client2 = await setupClient({
+      server,
+      ca: cert?.toString()
+    });
+  });
+
+  test("valid login", async () => {
+    await client2.login("admin");
+  });
 });
