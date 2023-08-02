@@ -149,16 +149,22 @@ export class Client {
         // Decrypt data
         data = await decrypt(data, this.config.encryptionKey);
       }
-      return {
-        data: data ? deserializeTaskJson(data) : [],
-        version: version as number
-      };
+      try {
+        const tasks = data ? deserializeTaskJson(data) : [];
+        return {
+          data: tasks,
+          version: version as number
+        };
+      }
+      catch (_err: any) {
+        throw new Error("Data corrupted or encrypted");
+      }
     }
     catch (error: any) {
       handleError(error);
     }
   }
-  
+
   /// Version number used for concurrency control (-1 means overwriting)
   async upload(data: TaskJson, version: number = -1) {
     try {
