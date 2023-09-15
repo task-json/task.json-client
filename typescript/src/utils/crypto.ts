@@ -1,4 +1,4 @@
-import openpgp from "openpgp";
+import * as openpgp from "openpgp";
 
 export async function encrypt(data: string, password: string) {
   const message = await openpgp.createMessage({
