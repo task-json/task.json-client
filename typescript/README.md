@@ -17,7 +17,7 @@ npm i task.json-client
 import { setupClient } from "task.json-client";
 
 async function main() {
-  const client = new setupClient({
+  const client = await setupClient({
     server: "http://localhost:3000"
   });
   await client.login("admin");
@@ -37,7 +37,7 @@ If used in Node.js, `verify` and `ca` flags can be used:
 import { setupClient } from "task.json-client";
 
 async function main() {
-  const client = new setupClient({
+  const client = await setupClient({
     server: "https://localhost:3000",
     // Do not verify the certificate
     // (less secure than trusting the certificate)
@@ -57,7 +57,7 @@ async function main() {
   // Verify the certificate (e.g. by fingerprint)
   // ...
 
-  const client = new setupClient({
+  const client = await setupClient({
     server,
     // Trust this certificate
     ca: cert.toString()
