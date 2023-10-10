@@ -88,17 +88,10 @@ export class Client {
       handleError(error);
     }
   }
-  
+
   async logout() {
-    try {
-      await this.axios.delete(this.fullPath("session"), {
-        headers: { "Authorization": `Bearer ${this.config.token}` }
-      });
-      this.config.token = undefined;
-    }
-    catch (error: any) {
-      handleError(error);
-    }
+    // log out from client side
+    this.config.token = undefined;
   }
 
   async sync(data: TaskJson) {
